@@ -1,0 +1,4 @@
+streamlit
+python-dotenv
+groq  # Ensure this is the correct name/version from pip or documentation
+PyPDF2
