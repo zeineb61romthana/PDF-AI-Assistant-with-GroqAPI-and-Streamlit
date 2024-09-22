@@ -30,5 +30,5 @@ This project is an **AI-powered assistant** that utilizes **GroqAPI** for genera
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/your-repo-name.git
+   git clone https://github.com/zeineb61romthana/sportify_chatbot_exemple
    cd your-repo-name
