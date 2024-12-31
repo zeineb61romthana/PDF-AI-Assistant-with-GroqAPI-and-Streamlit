@@ -1,122 +1,127 @@
-import os  # To interact with the operating system and environment variables.
-import streamlit as st  # To create and run interactive web applications directly through Python scripts.
-from pathlib import Path  # To provide object-oriented filesystem paths.
-from dotenv import load_dotenv  # To load environment variables from a .env file.
-from groq import Groq  # To interact with Groq's API for executing ML models.
-import PyPDF2  # To extract text from PDF documents.
+import streamlit as st
+import time
+from langchain_groq import ChatGroq
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains import create_retrieval_chain
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.embeddings import OllamaEmbeddings
 
-# Load environment variables from .env at the project root
-project_root = Path(__file__).resolve().parent
-load_dotenv(project_root / ".env")
+#from dotenv import load_dotenv
+#import os
+#load_dotenv()
+#groq_api_key = os.getenv('groq_api')
 
-class GroqAPI:
-    """Handles API operations with Groq to generate chat responses."""
-    def __init__(self, model_name: str):
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model_name = model_name
+st.title("RAG Doc Assistant")
 
-    # Internal method to fetch responses from the Groq API
-    def _response(self, message):
-        return self.client.chat.completions.create(
-            model=self.model_name,
-            messages=message,
-            temperature=0,
-            max_tokens=4096,
-            stream=True,
-            stop=None,
-        )
+# Initialize the LLM
+llm = ChatGroq(
+    groq_api_key=groq_api_key,
+    model_name="mixtral-8x7b-32768"  # Updated to a more current model
+)
 
-    # Generator to stream responses from the API
-    def response_stream(self, message):        
-        for chunk in self._response(message):
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+prompt = ChatPromptTemplate.from_template(
+    """
+    You are a document assistant that helps users find information in a context.
+    Please provide the most accurate response based on the context and inputs.
+    Only give information that is in the context, not in general.
+    
+    <context>
+    {context}
+    </context>
+    
+    Question: {input}
+    """
+)
 
-class Message:
-    """Manages chat messages within the Streamlit UI."""
-    system_prompt = "You are a professional AI. Please generate responses in English to all user inputs."
+# Function to process the uploaded PDF
+def vector_embedding(uploaded_file):
+    if "vectors" not in st.session_state:
+        try:
+            # Save the uploaded file to a temporary location
+            with open("temp_uploaded_file.pdf", "wb") as temp_file:
+                temp_file.write(uploaded_file.read())
+            
+            # Initialize Ollama embeddings
+            st.session_state.embeddings = OllamaEmbeddings(
+                model="nomic-embed-text",
+                base_url="http://localhost:11434"  # Default Ollama URL
+            )
+            
+            # Load and process the document
+            st.session_state.loader = PyPDFLoader("temp_uploaded_file.pdf")
+            st.session_state.docs = st.session_state.loader.load()
+            
+            # Create chunks
+            st.session_state.text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, 
+                chunk_overlap=200
+            )
+            
+            # Split documents
+            st.session_state.final_documents = st.session_state.text_splitter.split_documents(st.session_state.docs)
+            
+            # Create vector store
+            with st.spinner("Creating vector embeddings... This may take a few moments."):
+                st.session_state.vectors = FAISS.from_documents(
+                    st.session_state.final_documents, 
+                    st.session_state.embeddings
+                )
+            
+            return True
+            
+        except Exception as e:
+            st.error(f"Error processing document: {str(e)}")
+            return False
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists("temp_uploaded_file.pdf"):
+                os.remove("temp_uploaded_file.pdf")
 
-    # Initialize chat history if it doesn't exist in session state
-    def __init__(self):
-        if "messages" not in st.session_state:
-            st.session_state.messages = [{"role": "system", "content": self.system_prompt}]
+# File uploader for PDF
+uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
 
-    # Add a new message to the session state
-    def add(self, role: str, content: str):
-        st.session_state.messages.append({"role": role, "content": content})
+# Add a reset button
+if st.button("Reset"):
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.success("Application state has been reset!")
 
-    # Display all past messages in the UI, skipping system messages
-    def display_chat_history(self):
-        for message in st.session_state.messages:
-            if message["role"] == "system":
-                continue
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+# Embedding button
+if st.button("Process Document") and uploaded_file:
+    success = vector_embedding(uploaded_file)
+    if success:
+        st.success("Document processed successfully!")
 
-    # Stream API responses to the Streamlit chat message UI
-    def display_stream(self, generater):
-        with st.chat_message("assistant"):
-            return st.write_stream(generater)
+# Input for the question
+prompt1 = st.text_input("Enter Your Question About the Document")
 
-class ModelSelector:
-    """Allows the user to select a model from a predefined list."""
-    def __init__(self):
-        # List of available models to choose from
-        self.models = ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
+if prompt1:
+    if "vectors" in st.session_state:
+        try:
+            with st.spinner("Generating response..."):
+                document_chain = create_stuff_documents_chain(llm, prompt)
+                retriever = st.session_state.vectors.as_retriever()
+                retrieval_chain = create_retrieval_chain(retriever, document_chain)
+                
+                start = time.process_time()
+                response = retrieval_chain.invoke({'input': prompt1})
+                elapsed_time = time.process_time() - start
+                
+                st.write(f"Response time: {elapsed_time:.2f} seconds")
+                st.write(response['answer'])
 
-    # Display model selection in a sidebar with a title
-    def select(self):
-        with st.sidebar:
-            st.sidebar.title("Groq Chat with Llama3 + α")
-            return st.selectbox("Select a model:", self.models)
-
-def extract_text_from_pdf(pdf_file):
-    """Extract text from an uploaded PDF file."""
-    reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page_num in range(len(reader.pages)):
-        page = reader.pages[page_num]
-        text += page.extract_text()
-    return text
-
-def search_pdf_for_relevant_text(pdf_text, query):
-    """Search PDF text for paragraphs relevant to the user query."""
-    query_lower = query.lower()
-    relevant_paragraphs = [para for para in pdf_text.split('\n\n') if query_lower in para.lower()]
-    return "\n\n".join(relevant_paragraphs[:5])  # Limit to 5 paragraphs to avoid exceeding token limits
-
-# Entry point for the Streamlit app
-def main():
-    # Sidebar for uploading the PDF document
-    st.sidebar.title("Upload PDF Document")
-    pdf_file = st.sidebar.file_uploader("Upload a PDF document", type="pdf")
-
-    pdf_text = ""
-    if pdf_file:
-        # Extract text from the uploaded PDF
-        pdf_text = extract_text_from_pdf(pdf_file)
-        st.sidebar.write("PDF text successfully extracted!")
-
-    user_input = st.chat_input("Enter message to AI models...")
-    model = ModelSelector()
-    selected_model = model.select()
-
-    message = Message()
-
-    if user_input:
-        # Search for relevant content in the PDF
-        relevant_pdf_text = search_pdf_for_relevant_text(pdf_text, user_input)
-
-        # Combine user input and relevant PDF content
-        combined_message = f"Context from PDF:\n\n{relevant_pdf_text}\n\nUser Query: {user_input}"
-
-        llm = GroqAPI(selected_model)
-        message.add("user", user_input)
-        message.display_chat_history()
-
-        # Stream the response with the context from the PDF
-        response = message.display_stream(llm.response_stream(st.session_state.messages))
-        message.add("assistant", response)
-
-if __name__ == "__main__":
-    main()
+                # Show relevant document sections
+                with st.expander("Document Similarity Search"):
+                    for i, doc in enumerate(response["context"]):
+                        st.markdown(f"**Relevant Section {i+1}:**")
+                        st.write(doc.page_content)
+                        st.divider()
+        
+        except Exception as e:
+            st.error(f"Error generating response: {str(e)}")
+    else:
+        st.warning("Please process the document first.")
