@@ -1,4 +1,9 @@
 streamlit
 python-dotenv
-groq  # Ensure this is the correct name/version from pip or documentation
-PyPDF2
+groq  
+langchain
+langchain-community
+langchain-community ollama
+langchain_groq
+langchain_core
+
