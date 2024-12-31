@@ -1,34 +1,110 @@
-# 📄 PDF-AI Assistant with GroqAPI and Streamlit
+# 📚 RAG Document Assistant
 
-This project is an **AI-powered assistant** that utilizes **GroqAPI** for generating intelligent chat responses based on user inputs. Additionally, it allows users to upload PDFs, extracts relevant text, and uses the extracted content to enhance the responses. The application is built using **Streamlit** for a seamless user interface.
+A powerful document question-answering system built with Streamlit and LangChain. This application allows users to upload PDF documents and ask questions about their content using state-of-the-art language models and embeddings.
 
-## ✨ Key Features:
+![image](https://github.com/user-attachments/assets/6886f350-3592-4e16-8f4a-a022148818dd)
 
-- **Interactive Chat with AI**: Users can engage in real-time conversations with AI models, powered by **Groq**'s large language models (e.g., `llama3`, `gemma`).
-- **PDF Upload & Text Extraction**: Users can upload PDF files, from which the app extracts text using **PyPDF2**. Relevant sections of the PDF are included in the AI's responses.
-- **Model Selection**: The app allows users to choose from a selection of available models like `llama3-70b`, `gemma-7b-it`, etc., ensuring customizable interactions.
-- **Streamed Responses**: The app streams responses in real time for a smooth user experience, even for large language models.
-- **Search PDF Content**: Users can search for specific content from within the uploaded PDF to provide context for the AI responses.
 
-## 🛠️ Technologies and Libraries:
+## 🌟 Features
 
-- **Python**: Core programming language.
-- **Streamlit**: Provides the interactive user interface.
-- **Groq API**: Handles communication with large language models to generate chat responses.
-- **PyPDF2**: Extracts text from PDF documents.
-- **dotenv**: Manages environment variables securely.
-- **Pathlib**: For handling filesystem paths in an object-oriented manner.
+- PDF document processing and analysis
+- Advanced text chunking and embedding
+- Semantic search capabilities
+- Real-time question answering
+- Interactive web interface
+- Document context visualization
 
-## 🚀 How It Works:
+## 🛠️ Technologies Used
 
-1. **Upload a PDF**: Upload a PDF document containing relevant content (e.g., workout plans, research papers).
-2. **Ask Questions**: Type a query in the chat, and the AI will provide a response.
-3. **AI with Context**: If a PDF is uploaded, the app searches for relevant text in the document and incorporates that information into the AI's response.
-4. **Real-Time Streaming**: Watch as responses are generated and streamed to the user interface.
+- **Framework**: Streamlit
+- **LLM Provider**: Groq (Mixtral-8x7b-32768)
+- **Embeddings**: Ollama (nomic-embed-text)
+- **Vector Store**: FAISS
+- **PDF Processing**: LangChain
+- **Other Libraries**: 
+  - langchain-groq
+  - langchain-community
+  - python-dotenv
+  - PyPDF2
 
-## 🛠️ Installation and Setup:
+## 📋 Prerequisites
+
+1. Python 3.8 or higher
+2. Ollama installed on your system ([Install Ollama](https://ollama.ai/))
+3. Groq API key ([Get API Key](https://console.groq.com/))
+
+## 🚀 Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/zeineb61romthana/PDF-AI Assistant with GroqAPI and Streamlit
+```bash
+git clone https://github.com/zeineb61romthana/rag-doc-assistant.git
+cd rag-doc-assistant
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+```
+
+3. Install required packages:
+```bash
+pip install streamlit langchain-community langchain-groq faiss-cpu python-dotenv ollama
+```
+
+4. Pull the embedding model:
+```bash
+ollama pull nomic-embed-text
+```
+
+## ⚙️ Configuration
+
+1. Create a `.env` file in the project root:
+```env
+groq_api=your_groq_api_key_here
+```
+
+2. Make sure Ollama is running on your system:
+```bash
+ollama serve
+```
+
+## 💻 Usage
+
+1. Start the application:
+```bash
+streamlit run app.py
+```
+
+2. Open your browser and go to `http://localhost:8501`
+
+3. Use the application:
+   - Upload a PDF document
+   - Click "Process Document" to embed the content
+   - Enter your questions about the document
+   - View responses and relevant document sections
+
+## 🔍 How It Works
+
+1. **Document Processing**:
+   - PDF is uploaded and processed
+   - Text is split into manageable chunks
+   - Chunks are embedded using nomic-embed-text model
+
+2. **Question Answering**:
+   - User question is processed
+   - Relevant document sections are retrieved using FAISS
+   - Groq LLM generates response based on retrieved context
+
+3. **Response Generation**:
+   - Answer is displayed to user
+   - Relevant document sections are shown
+   - Processing time is displayed
+
+## 🌟 Acknowledgments
+
+- [LangChain](https://github.com/langchain-ai/langchain) for the amazing framework
+- [Groq](https://groq.com/) for the LLM API
+- [Ollama](https://ollama.ai/) for the embedding model
+- [Streamlit](https://streamlit.io/) for the web framework
 
