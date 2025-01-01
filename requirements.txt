@@ -1,6 +1,7 @@
 streamlit
 python-dotenv
 groq  
+pypdf
 langchain
 langchain-community
 langchain_groq
