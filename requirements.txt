@@ -3,7 +3,6 @@ python-dotenv
 groq  
 langchain
 langchain-community
-langchain-community ollama
 langchain_groq
 langchain_core
 
