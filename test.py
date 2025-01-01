@@ -9,10 +9,10 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.embeddings import OllamaEmbeddings
 
-#from dotenv import load_dotenv
-#import os
-#load_dotenv()
-#groq_api_key = os.getenv('groq_api')
+from dotenv import load_dotenv
+import os
+load_dotenv()
+groq_api_key = os.getenv('groq_api')
 
 st.title("RAG Doc Assistant")
 
